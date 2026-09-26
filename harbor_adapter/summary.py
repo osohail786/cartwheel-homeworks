@@ -47,9 +47,22 @@ def summarize_job(
     if not result_path.exists():
         raise FileNotFoundError(f"Harbor result not found: {result_path}")
     result = json.loads(result_path.read_text())
+    raw_trials = result.get("trial_results")
+    if raw_trials is None:
+        # The job-level result.json from installed harbor==0.23.0 is an
+        # aggregate summary with no "trial_results" list -- each trial's own
+        # outcome (task_name, verifier_result, exception_info) lives in its
+        # own <job_dir>/<trial_name>/result.json instead. Fall back to
+        # reading those directly when the aggregate list isn't present.
+        raw_trials = []
+        for trial_dir in sorted(job_dir.iterdir()):
+            trial_result_path = trial_dir / "result.json"
+            if not trial_dir.is_dir() or not trial_result_path.exists():
+                continue
+            raw_trials.append(json.loads(trial_result_path.read_text()))
     trials: dict[str, list[dict[str, Any]]] = defaultdict(list)
     unknown: list[str] = []
-    for trial in result.get("trial_results", []):
+    for trial in raw_trials:
         case_id = _case_id(str(trial.get("task_name", "")), set(by_id))
         if case_id is None:
             unknown.append(str(trial.get("task_name", "")))

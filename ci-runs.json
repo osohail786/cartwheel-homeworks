@@ -1,0 +1,17 @@
+{
+  "case_id": "e-009",
+  "mode": "missing_store_override_check",
+  "pull_request": "https://github.com/osohail786/cartwheel-homeworks/pull/1",
+  "first_run": {
+    "description": "Intentional regression: a temporary system-prompt instruction told the agent to always use the platform's 30-day default and never look up a store's own override policy.",
+    "url": "https://github.com/osohail786/cartwheel-homeworks/actions/runs/36215585469",
+    "result": "e-009 failed 0 of 5 trials (CI decision: block). The regression reached the verifier and failed the selected case in every trial.",
+    "note": "The same prompt change also broke e-002 and e-007, both of which involve refund-eligibility or policy-citation logic -- the 'small' instruction turned out to have a broader blast radius than intended, which is itself worth recording."
+  },
+  "second_run": {
+    "description": "Reverted the temporary instruction (git revert of the regression commit) and pushed again to the same pull request.",
+    "url": "https://github.com/osohail786/cartwheel-homeworks/actions/runs/36216805200",
+    "result": "e-009 passed 4 of 5 trials (CI decision: block, since a regression case blocks on any failed run).",
+    "explanation": "The original behavior mostly returned: in 4 of 5 trials the agent correctly found and applied Juniper Home Goods' 14-day override. The one failing trial (e-009__Pj2Ti8B) was not an infrastructure error -- exception_info is null, the code check (no_refund_row) passed, and the LLM judge (missing_store_override_check) explicitly scored the reply 0.0. In that trial the agent's policy reasoning was substantively correct (it named the 14-day override, cited store-juniper-home-goods-policy, and correctly concluded the window had passed), but its own order lookup failed mid-turn ('I wasn't able to pull up your specific order right now'), so it never concretely resolved order #6974 by name -- it gave a hedged, order-agnostic answer instead. Per the handout's guidance, this failure is kept as evidence rather than re-run: it shows the agent's true reliability on this case is closer to 4/5 (0.8) than the clean 5/5 the original baseline happened to observe, which is exactly the kind of information a single baseline run can hide and a revert-and-recheck can surface."
+  }
+}
